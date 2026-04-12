@@ -1,7 +1,6 @@
 import os
 import requests
 import streamlit as st
-from理论 import load_dotenv
 from dotenv import load_dotenv
 
 # LangChain & LangGraph imports
@@ -14,13 +13,11 @@ from langgraph.checkpoint.memory import MemorySaver
 # 1. Load Environment Variables (Local)
 load_dotenv()
 
-# 2. Key Management (Prioritizes Streamlit Cloud Secrets, then .env)
+# 2. Key Management
 def get_api_key():
-    # If we are on Streamlit Cloud, it looks in st.secrets
-    # If local, it looks in os.environ (loaded from .env)
     key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
     if not key:
-        st.error("Missing GROQ_API_KEY. Please add it to secrets or .env file.")
+        st.error("Missing GROQ_API_KEY. Please add it to Streamlit Secrets or your .env file.")
         st.stop()
     return key
 
@@ -34,7 +31,6 @@ def get_weather_data(city: str) -> str:
     Use this when user asks about weather, temperature, humidity or wind speed.
     """
     try:
-        # Get Coordinates
         geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1"
         geo_res = requests.get(geo_url).json()
 
@@ -45,7 +41,6 @@ def get_weather_data(city: str) -> str:
         lat, lon = res["latitude"], res["longitude"]
         name, country = res["name"], res.get("country", "")
 
-        # Get Weather
         weather_url = (
             f"https://api.open-meteo.com/v1/forecast"
             f"?latitude={lat}&longitude={lon}"
@@ -56,37 +51,28 @@ def get_weather_data(city: str) -> str:
         curr = weather_res["current"]
 
         return (f"The current weather in {name}, {country} is {curr['temperature_2m']}°C "
-                f"with {curr['relative_humidity_2m']}% humidity and "
-                f"wind speeds of {curr['wind_speed_10m']} km/h.")
+                f"with {curr['relative_humidity_2m']}% humidity.")
     
     except Exception as e:
         return f"I ran into an error getting the weather: {str(e)}"
 
 # 4. Agent Factory Function
 def create_gorq_agent():
-    """
-    Initializes the ChatGroq model and the LangGraph React Agent.
-    """
     api_key = get_api_key()
     
-    # Initialize LLM
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",
         temperature=0,
         api_key=api_key
     )
 
-    # Initialize Checkpointer for memory
     memory = MemorySaver()
 
-    # Define Personality
     system_message = (
         "You are Gorq, a sharp-witted and helpful AI assistant. "
-        "You have access to real-time weather and web search tools. "
         "Be concise, friendly, and occasionally crack a joke."
     )
 
-    # Create the Agent
     agent_executor = create_react_agent(
         model=llm,
         tools=[search_tool, get_weather_data],

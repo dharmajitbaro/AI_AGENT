@@ -34,7 +34,7 @@ if prompt := st.chat_input("How may i assist you?"):
 
     # Generate assistant response
     with st.chat_message("assistant"):
-        with st.spinner("Gorq is thinking..."):
+        with st.spinner("Assistant D is thinking..."):
             try:
                 # Invoke the agent from ai_agent.py
                 response = st.session_state.agent_executor.invoke(

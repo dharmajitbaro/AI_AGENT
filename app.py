@@ -5,6 +5,7 @@ from ai_agent import create_gorq_agent  # Changed from preserve_gorq_agent
 st.set_page_config(page_title="Gorq AI Agent", layout="centered")
 
 st.title("AI Agent")
+st.markdown("### An AI agent made with Groq Llama 3.3 API")
 st.markdown("---")
 
 # 2. Initialize Agent in Session State

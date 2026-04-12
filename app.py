@@ -2,7 +2,7 @@ import streamlit as st
 from ai_agent import create_gorq_agent  # Changed from preserve_gorq_agent
 
 # 1. Page Configuration
-st.set_page_config(page_title="Gorq AI Agent", layout="centered")
+st.set_page_config(page_title="Assistant D", layout="centered")
 
 st.title("AI Agent")
 st.markdown("### An AI agent made with Groq Llama 3.3 API")
@@ -26,7 +26,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # 4. User Input & Agent Logic
-if prompt := st.chat_input("Ask me something!!"):
+if prompt := st.chat_input("How may i assist you?"):
     # Add user message to history
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):

@@ -76,7 +76,6 @@ def create_gorq_agent():
 
     memory = MemorySaver()
 
-    # FIX 2: Explicitly tell the agent to prioritize the weather tool over web search
     system_message = (
         "You are Gorq, a sharp-witted and helpful AI assistant. "
         "Be concise, friendly, and occasionally crack a joke. "
@@ -84,12 +83,12 @@ def create_gorq_agent():
         "Do not use DuckDuckGo to search for weather."
     )
 
-    # FIX 3: Use 'state_modifier' instead of 'prompt' to correctly pass the system message
+    # FIX: Use 'prompt' instead of 'state_modifier' for LangGraph >= 0.2.62
     agent_executor = create_react_agent(
         model=llm,
         tools=[search_tool, get_weather_data],
         checkpointer=memory,
-        state_modifier=system_message 
+        prompt=system_message 
     )
     
     return agent_executor

@@ -1,12 +1,11 @@
 import os
 import requests
-import uuid  # Critical for Python 3.14 type-hint evaluation
 import streamlit as st
 from dotenv import load_dotenv
 
 # LangChain & LangGraph imports
 from langchain_groq import ChatGroq
-from langchain_core.tools import tool, Tool
+from langchain_core.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
@@ -23,57 +22,47 @@ def get_api_key():
     return key
 
 # 3. Define Tools
-# Wrapping the search tool to ensure a clean schema for Llama 3.3
-duck_search = DuckDuckGoSearchRun()
-search_tool = Tool(
-    name="duckduckgo_search",
-    description="Search the web for real-time info. Input should be a single search query string.",
-    func=duck_search.run
-)
+search_tool = DuckDuckGoSearchRun()
 
 @tool
-def get_weather_data(location_name: str) -> str:
+def get_weather_data(city: str) -> str:
     """
-    Fetches real-time weather. 
-    Input should be a city name, optionally with state or country (e.g., 'Hamirpur, HP, India').
+    Fetches the current weather data for a given city.
+    ALWAYS use this tool when the user asks about weather, temperature, humidity or wind speed.
     """
     try:
-        # 1. Geocoding - Search for the BEST match
-        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={location_name}&count=3&language=en&format=json"
-        geo_res = requests.get(geo_url).json()
+        # FIX 1: Use the 'params' dictionary so requests safely handles spaces in city names
+        geo_url = "https://geocoding-api.open-meteo.com/v1/search"
+        geo_params = {"name": city, "count": 1}
+        geo_res = requests.get(geo_url, params=geo_params).json()
 
         if not geo_res.get("results"):
-            return f"I couldn't find any location matching '{location_name}'."
+            return f"Sorry, I couldn't find the city '{city}'."
 
-        # Pick the most relevant result
         res = geo_res["results"][0]
         lat, lon = res["latitude"], res["longitude"]
-        # Formulate a clear location name (City, State, Country)
-        full_location = f"{res['name']}, {res.get('admin1', '')}, {res.get('country', '')}"
+        name, country = res["name"], res.get("country", "Unknown")
 
-        # 2. Fetch Detailed Weather
-        weather_url = (
-            f"https://api.open-meteo.com/v1/forecast"
-            f"?latitude={lat}&longitude={lon}"
-            f"&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code"
-            f"&timezone=auto"
-        )
-        weather_res = requests.get(weather_url).json()
-        curr = weather_res["current"]
+        # FIX 1 (cont): Use params for the weather API call as well for clean URL construction
+        weather_url = "https://api.open-meteo.com/v1/forecast"
+        weather_params = {
+            "latitude": lat,
+            "longitude": lon,
+            "current": "temperature_2m,relative_humidity_2m,wind_speed_10m",
+            "timezone": "auto"
+        }
         
-        # Simple Weather Code Translation
-        condition = "Clear" if curr['weather_code'] == 0 else "Partly Cloudy or Rainy"
+        weather_res = requests.get(weather_url, params=weather_params).json()
+        curr = weather_res.get("current", {})
 
-        return (
-            f"Current weather for {full_location}:\n"
-            f"- Temperature: {curr['temperature_2m']}°C\n"
-            f"- Feels Like: {curr['apparent_temperature']}°C\n"
-            f"- Humidity: {curr['relative_humidity_2m']}%\n"
-            f"- Conditions: {condition}"
-        )
+        if not curr:
+            return f"Could not retrieve current weather conditions for {name}."
+
+        return (f"The current weather in {name}, {country} is {curr.get('temperature_2m')}°C "
+                f"with {curr.get('relative_humidity_2m')}% humidity and a wind speed of {curr.get('wind_speed_10m')} km/h.")
     
     except Exception as e:
-        return f"Error fetching weather: {str(e)}"
+        return f"I ran into an error getting the weather: {str(e)}"
 
 # 4. Agent Factory Function
 def create_gorq_agent():
@@ -87,18 +76,20 @@ def create_gorq_agent():
 
     memory = MemorySaver()
 
-    # System message revised for better tool usage and accuracy
+    # FIX 2: Explicitly tell the agent to prioritize the weather tool over web search
     system_message = (
-        "You are Gorq, a sharp-witted AI assistant. "
-        "When asked about weather, use the location_name parameter specifically (e.g., 'Delhi, India'). "
-        "Always summarize your findings with a touch of wit and confirm the specific location you found."
+        "You are Gorq, a sharp-witted and helpful AI assistant. "
+        "Be concise, friendly, and occasionally crack a joke. "
+        "IMPORTANT: If the user asks about the weather, YOU MUST use the 'get_weather_data' tool. "
+        "Do not use DuckDuckGo to search for weather."
     )
 
+    # FIX 3: Use 'state_modifier' instead of 'prompt' to correctly pass the system message
     agent_executor = create_react_agent(
         model=llm,
         tools=[search_tool, get_weather_data],
         checkpointer=memory,
-        prompt=system_message
+        state_modifier=system_message 
     )
     
     return agent_executor

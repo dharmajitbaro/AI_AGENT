@@ -1,6 +1,6 @@
 import os
 import requests
-import uuid
+import uuid  # CRITICAL: This fixes the NameError in Python 3.14
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -23,12 +23,11 @@ def get_api_key():
     return key
 
 # 3. Define Tools
-# --- LOGIC CHANGE: Wrapping DuckDuckGo in a Tool class ---
-# This forces the LLM to provide a clear 'query' string, preventing Error 400
+# Wrapping search to force a clear string schema for Llama 3.3
 duck_search = DuckDuckGoSearchRun()
 search_tool = Tool(
     name="duckduckgo_search",
-    description="Search the web for real-time information and news. Input should be a single search query string.",
+    description="Search the web for real-time information. Input should be a search query string.",
     func=duck_search.run
 )
 
@@ -76,12 +75,10 @@ def create_gorq_agent():
 
     memory = MemorySaver()
 
-    # --- LOGIC CHANGE: Enhanced System Message ---
-    # We guide the model specifically on how to format tool calls
     system_message = (
-        "You are Gorq, a sharp-witted and helpful AI assistant powered by Groq. "
-        "When using the search tool, provide a clear search query as a string. "
-        "Summarize your findings concisely and maintain a friendly, witty tone."
+        "You are Gorq, a sharp-witted and helpful AI assistant. "
+        "When you need to search, use the duckduckgo_search tool with a simple string query. "
+        "Be concise, friendly, and use a touch of humor."
     )
 
     agent_executor = create_react_agent(

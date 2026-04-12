@@ -1,52 +1,97 @@
 import os
 import requests
+import streamlit as st
+from理论 import load_dotenv
 from dotenv import load_dotenv
+
+# LangChain & LangGraph imports
 from langchain_groq import ChatGroq
 from langchain_core.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
-# Load variables
+# 1. Load Environment Variables (Local)
 load_dotenv()
 
-# --- Tools ---
+# 2. Key Management (Prioritizes Streamlit Cloud Secrets, then .env)
+def get_api_key():
+    # If we are on Streamlit Cloud, it looks in st.secrets
+    # If local, it looks in os.environ (loaded from .env)
+    key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+    if not key:
+        st.error("Missing GROQ_API_KEY. Please add it to secrets or .env file.")
+        st.stop()
+    return key
+
+# 3. Define Tools
 search_tool = DuckDuckGoSearchRun()
 
 @tool
 def get_weather_data(city: str) -> str:
-    """Fetches current weather data for a given city."""
+    """
+    Fetches the current weather data for a given city.
+    Use this when user asks about weather, temperature, humidity or wind speed.
+    """
     try:
+        # Get Coordinates
         geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1"
-        geo = requests.get(geo_url).json()
-        if not geo.get("results"): return f"City '{city}' not found."
+        geo_res = requests.get(geo_url).json()
 
-        res = geo["results"][0]
+        if not geo_res.get("results"):
+            return f"Sorry, I couldn't find the city '{city}'."
+
+        res = geo_res["results"][0]
+        lat, lon = res["latitude"], res["longitude"]
+        name, country = res["name"], res.get("country", "")
+
+        # Get Weather
         weather_url = (
-            f"https://api.open-meteo.com/v1/forecast?latitude={res['latitude']}&longitude={res['longitude']}"
-            f"&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=auto"
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}&longitude={lon}"
+            f"&current=temperature_2m,relative_humidity_2m,wind_speed_10m"
+            f"&timezone=auto"
         )
-        w = requests.get(weather_url).json()["current"]
-        return f"In {res['name']}, it's {w['temperature_2m']}°C with {w['relative_humidity_2m']}% humidity."
-    except Exception as e:
-        return f"Weather error: {str(e)}"
+        weather_res = requests.get(weather_url).json()
+        curr = weather_res["current"]
 
-# --- Agent Factory ---
-def preserve_gorq_agent():
-    """Initializes and returns the LangGraph agent."""
+        return (f"The current weather in {name}, {country} is {curr['temperature_2m']}°C "
+                f"with {curr['relative_humidity_2m']}% humidity and "
+                f"wind speeds of {curr['wind_speed_10m']} km/h.")
+    
+    except Exception as e:
+        return f"I ran into an error getting the weather: {str(e)}"
+
+# 4. Agent Factory Function
+def create_gorq_agent():
+    """
+    Initializes the ChatGroq model and the LangGraph React Agent.
+    """
+    api_key = get_api_key()
+    
+    # Initialize LLM
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile", 
+        model="llama-3.3-70b-versatile",
         temperature=0,
-        api_key=os.getenv("GROQ_API_KEY")
+        api_key=api_key
     )
-    
+
+    # Initialize Checkpointer for memory
     memory = MemorySaver()
-    system_message = "You are Gorq, a witty AI assistant. Summarize search results with a touch of humor."
-    
-    agent = create_react_agent(
+
+    # Define Personality
+    system_message = (
+        "You are Gorq, a sharp-witted and helpful AI assistant. "
+        "You have access to real-time weather and web search tools. "
+        "Be concise, friendly, and occasionally crack a joke."
+    )
+
+    # Create the Agent
+    agent_executor = create_react_agent(
         model=llm,
         tools=[search_tool, get_weather_data],
         checkpointer=memory,
         prompt=system_message
     )
-    return agent
+    
+    return agent_executor

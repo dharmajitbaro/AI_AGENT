@@ -1,5 +1,6 @@
 import os
 import requests
+import uuid
 import streamlit as st
 from dotenv import load_dotenv
 

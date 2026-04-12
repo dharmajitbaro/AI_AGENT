@@ -25,7 +25,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # 4. User Input & Agent Logic
-if prompt := st.chat_input("Ask me about the weather or search the web!"):
+if prompt := st.chat_input("Ask me something!!"):
     # Add user message to history
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):

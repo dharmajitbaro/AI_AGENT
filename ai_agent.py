@@ -25,39 +25,20 @@ def get_api_key():
 search_tool = DuckDuckGoSearchRun()
 
 @tool
-def get_datetime(city: str = "UTC") -> str:
+def get_datetime(dummy: str = "") -> str:
     """
-    Returns the current real-time date and time for a given city or timezone.
-    Use this when user asks about current time, date, day, or year.
-    Examples: 'what time is it', 'what is todays date', 'what day is it'.
+    Returns the current real-time date, time and day.
+    Use this when user asks about current time, date, day, month or year.
+    Do not pass any argument.
     """
     try:
-        city_timezone_map = {
-            "delhi": "Asia/Kolkata",
-            "mumbai": "Asia/Kolkata",
-            "india": "Asia/Kolkata",
-            "kolkata": "Asia/Kolkata",
-            "bangalore": "Asia/Kolkata",
-            "chennai": "Asia/Kolkata",
-            "new york": "America/New_York",
-            "london": "Europe/London",
-            "tokyo": "Asia/Tokyo",
-            "dubai": "Asia/Dubai",
-            "sydney": "Australia/Sydney",
-            "paris": "Europe/Paris",
-            "utc": "UTC",
-        }
-
-        timezone_str = city_timezone_map.get(city.lower(), "Asia/Kolkata")
-        now = datetime.now(ZoneInfo(timezone_str))
-
+        now = datetime.now(ZoneInfo("Asia/Kolkata"))
         return (
-            f"Current date and time:\n"
+            f"Current date and time in India:\n"
             f"📅 Date: {now.strftime('%A, %d %B %Y')}\n"
             f"🕐 Time: {now.strftime('%I:%M %p')}\n"
-            f"🌍 Timezone: {timezone_str}"
+            f"🌍 Timezone: Asia/Kolkata (IST)"
         )
-
     except Exception as e:
         return f"Error getting date/time: {str(e)}"
 
@@ -114,13 +95,13 @@ def create_gorq_agent():
     memory = MemorySaver()
 
     system_message = (
-        "You are a sharp-witted and helpful AI assistant. "
-        "Be concise, friendly, and occasionally crack a joke. "
-        "STRICTLY follow these tool rules:\n"
-        "1. Weather questions → ALWAYS use get_weather_data tool. NEVER use web search.\n"
-        "2. Time or date questions → ALWAYS use get_datetime tool. NEVER guess the date.\n"
-        "3. Everything else → use web search tool."
-    )
+    "You are a sharp-witted and helpful AI assistant. "
+    "Be concise, friendly, and occasionally crack a joke. "
+    "STRICTLY follow these tool rules:\n"
+    "1. Weather questions → ALWAYS use get_weather_data tool. NEVER use web search.\n"
+    "2. Time, date, day questions → ALWAYS use get_datetime tool. Call it with no arguments.\n"
+    "3. Everything else → use web search tool."
+)
 
     agent_executor = create_react_agent(
         model=llm,

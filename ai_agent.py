@@ -3,7 +3,7 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo  # built-in, no install needed
 from langchain_groq import ChatGroq
 from langchain_core.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
@@ -32,7 +32,6 @@ def get_datetime(city: str = "UTC") -> str:
     Examples: 'what time is it', 'what is todays date', 'what day is it'.
     """
     try:
-        # Map common city names to timezones
         city_timezone_map = {
             "delhi": "Asia/Kolkata",
             "mumbai": "Asia/Kolkata",
@@ -50,8 +49,7 @@ def get_datetime(city: str = "UTC") -> str:
         }
 
         timezone_str = city_timezone_map.get(city.lower(), "Asia/Kolkata")
-        tz = pytz.timezone(timezone_str)
-        now = datetime.now(tz)
+        now = datetime.now(ZoneInfo(timezone_str))
 
         return (
             f"Current date and time:\n"
@@ -128,7 +126,7 @@ def create_gorq_agent():
         model=llm,
         tools=[search_tool, get_weather_data, get_datetime],
         checkpointer=memory,
-        prompt=system_message
+        prompt=system_message  # correct parameter
     )
 
     return agent_executor

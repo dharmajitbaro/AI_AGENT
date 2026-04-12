@@ -2,9 +2,9 @@ import streamlit as st
 from ai_agent import create_gorq_agent  # Changed from preserve_gorq_agent
 
 # 1. Page Configuration
-st.set_page_config(page_title="Gorq AI Agent", page_icon="🤖", layout="centered")
+st.set_page_config(page_title="Gorq AI Agent", layout="centered")
 
-st.title("🤖 Gorq: The Witty Agent")
+st.title("AI Agent")
 st.markdown("---")
 
 # 2. Initialize Agent in Session State

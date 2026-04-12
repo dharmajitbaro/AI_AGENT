@@ -2,15 +2,13 @@ import os
 import requests
 import streamlit as st
 from dotenv import load_dotenv
-
-# LangChain & LangGraph imports
 from langchain_groq import ChatGroq
 from langchain_core.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
-# 1. Load Environment Variables (Local)
+# 1. Load Environment Variables
 load_dotenv()
 
 # 2. Key Management
@@ -28,46 +26,46 @@ search_tool = DuckDuckGoSearchRun()
 def get_weather_data(city: str) -> str:
     """
     Fetches the current weather data for a given city.
-    ALWAYS use this tool when the user asks about weather, temperature, humidity or wind speed.
+    Use this when user asks about weather, temperature,
+    humidity or wind speed. Always use this tool for
+    weather questions, never use web search for weather.
     """
     try:
-        # FIX 1: Use the 'params' dictionary so requests safely handles spaces in city names
-        geo_url = "https://geocoding-api.open-meteo.com/v1/search"
-        geo_params = {"name": city, "count": 1}
-        geo_res = requests.get(geo_url, params=geo_params).json()
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1"
+        geo_res = requests.get(geo_url).json()
 
         if not geo_res.get("results"):
             return f"Sorry, I couldn't find the city '{city}'."
 
         res = geo_res["results"][0]
         lat, lon = res["latitude"], res["longitude"]
-        name, country = res["name"], res.get("country", "Unknown")
+        name, country = res["name"], res.get("country", "")
 
-        # FIX 1 (cont): Use params for the weather API call as well for clean URL construction
-        weather_url = "https://api.open-meteo.com/v1/forecast"
-        weather_params = {
-            "latitude": lat,
-            "longitude": lon,
-            "current": "temperature_2m,relative_humidity_2m,wind_speed_10m",
-            "timezone": "auto"
-        }
-        
-        weather_res = requests.get(weather_url, params=weather_params).json()
-        curr = weather_res.get("current", {})
+        weather_url = (
+            f"https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}&longitude={lon}"
+            f"&current=temperature_2m,relative_humidity_2m,"
+            f"wind_speed_10m,precipitation,weather_code"
+            f"&timezone=auto"
+        )
+        weather_res = requests.get(weather_url).json()
+        curr = weather_res["current"]
 
-        if not curr:
-            return f"Could not retrieve current weather conditions for {name}."
+        return (
+            f"Current weather in {name}, {country}:\n"
+            f"🌡️ Temperature: {curr['temperature_2m']}°C\n"
+            f"💧 Humidity: {curr['relative_humidity_2m']}%\n"
+            f"💨 Wind Speed: {curr['wind_speed_10m']} km/h\n"
+            f"🌧️ Precipitation: {curr['precipitation']} mm"
+        )
 
-        return (f"The current weather in {name}, {country} is {curr.get('temperature_2m')}°C "
-                f"with {curr.get('relative_humidity_2m')}% humidity and a wind speed of {curr.get('wind_speed_10m')} km/h.")
-    
     except Exception as e:
         return f"I ran into an error getting the weather: {str(e)}"
 
 # 4. Agent Factory Function
 def create_gorq_agent():
     api_key = get_api_key()
-    
+
     llm = ChatGroq(
         model="llama-3.3-70b-versatile",
         temperature=0,
@@ -77,18 +75,18 @@ def create_gorq_agent():
     memory = MemorySaver()
 
     system_message = (
-        "You are Gorq, a sharp-witted and helpful AI assistant. "
+        "You are a sharp-witted and helpful AI assistant. "
         "Be concise, friendly, and occasionally crack a joke. "
-        "IMPORTANT: If the user asks about the weather, YOU MUST use the 'get_weather_data' tool. "
-        "Do not use DuckDuckGo to search for weather."
+        "IMPORTANT: When user asks about weather, temperature, "
+        "humidity or wind speed — ALWAYS use the get_weather_data "
+        "tool. Never use web search for weather questions."
     )
 
-    # FIX: Use 'prompt' instead of 'state_modifier' for LangGraph >= 0.2.62
     agent_executor = create_react_agent(
         model=llm,
         tools=[search_tool, get_weather_data],
         checkpointer=memory,
-        prompt=system_message 
+        prompt=system_message
     )
-    
+
     return agent_executor

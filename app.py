@@ -4,7 +4,7 @@ from ai_agent import create_gorq_agent  # Changed from preserve_gorq_agent
 # 1. Page Configuration
 st.set_page_config(page_title="Assistant D", layout="centered")
 
-st.title("AI Agent")
+st.title("ִ𖤐 Assistant D")
 st.markdown("### An AI agent made with Groq Llama 3.3 API")
 st.markdown("---")
 

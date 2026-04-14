@@ -14,7 +14,8 @@ A smart AI assistant built with LangGraph and Groq that can search the web, fetc
 ---
 
 ## 🌐 Live Demo
-👉 [Try Assistant D]((https://assistantd.streamlit.app/))
+👉 [Try Assistant D]
+https://assistantd.streamlit.app/
 
 ---
 

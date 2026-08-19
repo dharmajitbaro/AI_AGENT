@@ -5,7 +5,7 @@ from agent import create_gemini_agent
 st.set_page_config(page_title="Assistant D", layout="centered")
 
 st.title("ִ𖤐 AI Assistant D")
-st.markdown("### An AI agent powered by Google Gemini 2.0 Flash")
+st.markdown("### An AI agent powered by Google Gemini 3.6 Flash")
 st.markdown("---")
 
 # 2. Initialize Agent in Session State

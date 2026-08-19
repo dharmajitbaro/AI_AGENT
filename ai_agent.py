@@ -149,7 +149,7 @@ def create_gorq_agent():
     api_key = get_api_key()
 
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model="llama3-70b-8192",
         temperature=0,
         api_key=api_key,
         max_retries=2,

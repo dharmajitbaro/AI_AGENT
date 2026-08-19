@@ -39,7 +39,13 @@ if prompt := st.chat_input("How may I assist you?"):
                     config=st.session_state.config,
                 )
 
-                output = response["messages"][-1].content
+                raw = response["messages"][-1].content
+                if isinstance(raw, list):
+                    output = "".join(
+                        block["text"] for block in raw if isinstance(block, dict) and "text" in block
+                    )
+                else:
+                    output = raw
 
                 st.markdown(output)
 

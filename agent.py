@@ -150,7 +150,7 @@ def create_gemini_agent():
     api_key = get_api_key()
 
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-3.6-flash",
         temperature=0,
         google_api_key=api_key,
         convert_system_message_to_human=True,

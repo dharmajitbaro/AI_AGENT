@@ -1,9 +1,7 @@
 streamlit
-langchain-groq
-langgraph
-langchain-community
-langchain-core
-requests
-duckduckgo-search
-ddgs
 python-dotenv
+requests
+langchain-groq
+langchain-community
+langgraph
+duckduckgo-search

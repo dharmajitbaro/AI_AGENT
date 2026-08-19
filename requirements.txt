@@ -1,7 +1,7 @@
 streamlit
 python-dotenv
 requests
-langchain-groq
+langchain-google-genai
 langchain-community
 langgraph
 duckduckgo-search
